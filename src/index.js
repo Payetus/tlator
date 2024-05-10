@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('node:path');
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -21,13 +22,43 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+  return mainWindow;
 };
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
-  createWindow();
+  ipcMain.handle('ping', () => 'pong');
+  const mainWindow = createWindow();
+  
+  const openFile = () => {
+    dialog.showOpenDialog(mainWindow, {
+        properties: ['openFile']
+    }).then(result => {
+        if (!result.canceled) {
+            const filePath = result.filePaths[0];
+            fs.readFile(filePath, 'utf-8', (err, data) => {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+                // Do something with the file data
+                console.log(data);
+            });
+        }
+    }).catch(err => {
+        console.error(err);
+    });
+  }
+
+  ipcMain.handle('open-file', () => {
+    openFile();
+  });
+  
+  ipcMain.handle('save-file', (event, data) => {
+    saveFile(data);
+  });
 
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
@@ -49,3 +80,4 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
+
